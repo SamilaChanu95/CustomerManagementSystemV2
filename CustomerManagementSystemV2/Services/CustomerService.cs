@@ -49,6 +49,33 @@ namespace CustomerManagementSystemV2.Services
                     return Results.Ok(customers);
                 }
             });
+
+            builder.MapPut("/update-customer/{id}", async (int id,CustomerDto customerDto, IConfiguration configuration) =>
+            {
+                var connectionString = configuration.GetConnectionString("DBConnection");
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    string sql = $@" UPDATE Customer SET FirstName = @FirstName, LastName = @LastName, Email = @Email, DateOfBirth = @DateOfBirth WHERE Id = '{id}'";
+                    var parameters = new DynamicParameters();
+                    parameters.Add("FirstName", customerDto.FirstName, DbType.String);
+                    parameters.Add("LastName", customerDto.LastName, DbType.String);
+                    parameters.Add("Email", customerDto.Email, DbType.String);
+                    parameters.Add("DateOfBirth", customerDto.DateOfBirth, DbType.DateTime);
+                    var customers = await connection.ExecuteAsync(sql, parameters);
+                    return Results.Ok(customers);
+                }
+            });
+
+            builder.MapDelete("/delete-customer/{id}", async (int id, IConfiguration configuration) =>
+            {
+                var connectionString = configuration.GetConnectionString("DBConnection");
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    string sql = $@" DELETE FROM Customer WHERE Id = '{id}'";
+                    var customers = await connection.ExecuteAsync(sql);
+                    return Results.Ok(customers);
+                }
+            });
         }
     }
 }
