@@ -14,6 +14,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddSingleton(serviceProvider => {
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var connectionString = configuration.GetConnectionString("DBConnection") ?? throw new ApplicationException("The connection string is null.");
+    return new SqlConnectionFactory(connectionString);
+});
 
 var app = builder.Build();
 

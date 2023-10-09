@@ -12,10 +12,11 @@ namespace CustomerManagementSystemV2.Services
     {
         public static void MapCustomerEndpoints(this IEndpointRouteBuilder builder) 
         {
-            builder.MapGet("/get-customers-list", async (IConfiguration configuration) =>
+            builder.MapGet("/get-customers-list", async (SqlConnectionFactory sqlConnectionFactory) =>
             {
-                var connectionString = configuration.GetConnectionString("DBConnection");
-                using (var connection = new SqlConnection(connectionString))
+                //var connectionString = configuration.GetConnectionString("DBConnection");
+
+                using (var connection = sqlConnectionFactory.CreateConnection())
                 {
                     const string sql = "SELECT Id, FirstName, LastName, Email, DateOfBirth FROM Customer";
                     var customers = await connection.QueryAsync<Customer>(sql);
@@ -23,21 +24,21 @@ namespace CustomerManagementSystemV2.Services
                 }
             });
 
-            builder.MapGet("/get-customer/{id}", async (int id, IConfiguration configuration) =>
+            builder.MapGet("/get-customer/{id}", async (int id, SqlConnectionFactory sqlConnectionFactory) =>
             {
-                var connectionString = configuration.GetConnectionString("DBConnection");
-                using (var connection = new SqlConnection(connectionString))
+                /*var connectionString = configuration.GetConnectionString("DBConnection");*/
+                using (var connection = sqlConnectionFactory.CreateConnection())
                 {
                     string sql = $@" SELECT Id, FirstName, LastName, Email, DateOfBirth FROM Customer WHERE Id = '{id}'";
-                    var customers = await connection.QueryAsync<Customer>(sql);
-                    return Results.Ok(customers);
+                    var customer = await connection.QueryAsync<Customer>(sql);
+                    return customer is not null ? Results.Ok(customer) : Results.NotFound();
                 }
             });
 
-            builder.MapPost("/create-customer", async (CustomerDto customerDto, IConfiguration configuration) =>
+            builder.MapPost("/create-customer", async (CustomerDto customerDto, SqlConnectionFactory sqlConnectionFactory) =>
             {
-                var connectionString = configuration.GetConnectionString("DBConnection");
-                using (var connection = new SqlConnection(connectionString))
+                // var connectionString = configuration.GetConnectionString("DBConnection");
+                using (var connection = sqlConnectionFactory.CreateConnection())
                 {
                     string sql = @" INSERT INTO Customer(FirstName, LastName, Email, DateOfBirth) VALUES (@FirstName, @LastName, @Email, @DateOfBirth)";
                     var parameters = new DynamicParameters();
@@ -55,6 +56,18 @@ namespace CustomerManagementSystemV2.Services
                 var connectionString = configuration.GetConnectionString("DBConnection");
                 using (var connection = new SqlConnection(connectionString))
                 {
+                    string existing = $@" SELECT * FROM Customer WHERE Id = '{id}'";
+                    var existingCustomers = await connection.QueryAsync<Customer>(existing);
+                    if (existingCustomers.Count() == 0) 
+                    { 
+                        return Results.NotFound("This Id value is not found"); 
+                    }
+
+                    if (existingCustomers.Count() > 1)
+                    {
+                        return Results.BadRequest("This Id value found more than one");
+                    }
+
                     string sql = $@" UPDATE Customer SET FirstName = @FirstName, LastName = @LastName, Email = @Email, DateOfBirth = @DateOfBirth WHERE Id = '{id}'";
                     var parameters = new DynamicParameters();
                     parameters.Add("FirstName", customerDto.FirstName, DbType.String);
@@ -71,6 +84,19 @@ namespace CustomerManagementSystemV2.Services
                 var connectionString = configuration.GetConnectionString("DBConnection");
                 using (var connection = new SqlConnection(connectionString))
                 {
+                    string existing = $@" SELECT * FROM Customer WHERE Id = '{id}'";
+                    var existingCustomers = await connection.QueryAsync(existing);
+
+                    if (existingCustomers.Count() == 0) {
+
+                        return Results.NotFound("This Id value is not found.");
+                    }
+
+                    if (existingCustomers.Count() > 1)
+                    {
+                        return Results.BadRequest("This Id value found more than one");
+                    }
+
                     string sql = $@" DELETE FROM Customer WHERE Id = '{id}'";
                     var customers = await connection.ExecuteAsync(sql);
                     return Results.Ok(customers);
