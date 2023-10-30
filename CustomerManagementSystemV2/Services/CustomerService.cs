@@ -4,6 +4,7 @@ using CustomerManagementSystemV2.Models;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using System.Collections;
 using System.Data;
 
 namespace CustomerManagementSystemV2.Services
@@ -19,7 +20,7 @@ namespace CustomerManagementSystemV2.Services
                 using (var connection = sqlConnectionFactory.CreateConnection())
                 {
                     const string sql = "SELECT Id, FirstName, LastName, Email, DateOfBirth FROM Customer";
-                    var customers = await connection.QueryAsync<Customer>(sql);
+                    IEnumerable<Customer> customers = await connection.QueryAsync<Customer>(sql);
                     return Results.Ok(customers);
                 }
             });
@@ -84,7 +85,7 @@ namespace CustomerManagementSystemV2.Services
                 var connectionString = configuration.GetConnectionString("DBConnection");
                 using (var connection = new SqlConnection(connectionString))
                 {
-                    string existing = $@" SELECT * FROM Customer WHERE Id = '{id}'";
+                    string existing = $@" SELECT * FROM Customer WHERE Id = {id}";
                     var existingCustomers = await connection.QueryAsync(existing);
 
                     if (existingCustomers.Count() == 0) {
@@ -97,7 +98,7 @@ namespace CustomerManagementSystemV2.Services
                         return Results.BadRequest("This Id value found more than one");
                     }
 
-                    string sql = $@" DELETE FROM Customer WHERE Id = '{id}'";
+                    string sql = $@" DELETE FROM Customer WHERE Id = {id}";
                     var customers = await connection.ExecuteAsync(sql);
                     return Results.Ok(customers);
                 }
